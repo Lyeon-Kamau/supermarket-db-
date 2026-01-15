@@ -167,6 +167,8 @@ CREATE TABLE `supplier` (
   `Status` enum('Active','Inactive') DEFAULT 'Active'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--INDEXES--
+
 -- Indexes for table `attendancelog`
 ALTER TABLE `attendancelog`
   ADD PRIMARY KEY (`AttendanceID`),
@@ -234,6 +236,8 @@ ALTER TABLE `salesitems`
 ALTER TABLE `supplier`
   ADD PRIMARY KEY (`SupplierID`);
 
+  --AUTO INCREMENT--
+
 -- AUTO_INCREMENT for table `attendancelog`
 ALTER TABLE `attendancelog`
   MODIFY `AttendanceID` int(11) NOT NULL AUTO_INCREMENT;
@@ -277,6 +281,8 @@ ALTER TABLE `sales`
 -- AUTO_INCREMENT for table `salesitems`
 ALTER TABLE `salesitems`
   MODIFY `SaleItemID` int(11) NOT NULL AUTO_INCREMENT;
+
+--CONSTRAINTS--
 
 -- Constraints for table `attendancelog`
 ALTER TABLE `attendancelog`
