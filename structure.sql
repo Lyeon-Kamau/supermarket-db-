@@ -729,3 +729,214 @@ GROUP BY e.EmployeeID;
 
 
 
+<<<<<<< HEAD
+=======
+
+--Calculate total value of a sale'
+DELIMITER $$
+
+CREATE FUNCTION getSaleTotal(sale_id INT)
+RETURNS DECIMAL(10,2)
+DETERMINISTIC
+BEGIN
+    DECLARE total DECIMAL(10,2);
+
+    SELECT SUM(Quantity * UnitPrice)
+    INTO total
+    FROM salesitems
+    WHERE SaleID = sale_id;
+
+    RETURN IFNULL(total, 0);
+END$$
+
+DELIMITER ;
+
+
+--Check product stock status'
+DELIMITER $$
+
+CREATE FUNCTION stockStatus(product_id INT)
+RETURNS VARCHAR(20)
+DETERMINISTIC
+BEGIN
+    DECLARE qty INT;
+
+    SELECT QuantityInStock
+    INTO qty
+    FROM products
+    WHERE ProductID = product_id;
+
+    IF qty = 0 THEN
+        RETURN 'Out of Stock';
+    ELSEIF qty < 10 THEN
+        RETURN 'Low Stock';
+    ELSE
+        RETURN 'In Stock';
+    END IF;
+END$$
+
+DELIMITER ;
+
+--Get current price of a product'
+DELIMITER $$
+
+CREATE FUNCTION getProductPrice(product_id INT)
+RETURNS DECIMAL(10,2)
+DETERMINISTIC
+BEGIN
+    DECLARE price DECIMAL(10,2);
+
+    SELECT Price
+    INTO price
+    FROM products
+    WHERE ProductID = product_id;
+
+    RETURN price;
+END$$
+
+DELIMITER ;
+
+--Calculate employee attendance percentage'
+DELIMITER $$
+
+CREATE FUNCTION attendancePercentage(emp_id INT)
+RETURNS DECIMAL(5,2)
+DETERMINISTIC
+BEGIN
+    DECLARE total_days INT;
+    DECLARE present_days INT;
+
+    SELECT COUNT(*) INTO total_days
+    FROM attendancelog
+    WHERE EmployeeID = emp_id;
+
+    SELECT COUNT(*) INTO present_days
+    FROM attendancelog
+    WHERE EmployeeID = emp_id
+    AND Status = 'Present';
+
+    IF total_days = 0 THEN
+        RETURN 0;
+    END IF;
+
+    RETURN (present_days / total_days) * 100;
+END$$
+
+DELIMITER ;
+
+--Check if a promotion is active'
+DELIMITER $$
+
+CREATE FUNCTION isPromotionActive(promo_id INT)
+RETURNS VARCHAR(10)
+DETERMINISTIC
+BEGIN
+    DECLARE enddate DATE;
+
+    SELECT End_Date INTO enddate
+    FROM promotions
+    WHERE PromotionID = promo_id;
+
+    IF enddate >= CURDATE() THEN
+        RETURN 'Active';
+    ELSE
+        RETURN 'Expired';
+    END IF;
+END$$
+
+DELIMITER ;
+
+--VIEWS--
+
+--Customer Purchase Summary--
+CREATE VIEW view_customer_sales_summary AS
+SELECT 
+    c.CustomerID,
+    CONCAT(c.FirstName, ' ', c.LastName) AS CustomerName,
+    COUNT(s.SaleID) AS TotalSales,
+    SUM(s.TotalAmount) AS TotalSpent
+FROM customer c
+LEFT JOIN sales s ON c.CustomerID = s.CustomerID
+GROUP BY c.CustomerID;
+
+--Daily Sales Report--
+CREATE VIEW view_daily_sales AS
+SELECT 
+    DATE(SaleDate) AS SaleDay,
+    COUNT(SaleID) AS NumberOfSales,
+    SUM(SubTotal) AS SubTotal,
+    SUM(TaxAmount) AS TotalTax,
+    SUM(DiscountAmount) AS TotalDiscount,
+    SUM(TotalAmount) AS TotalRevenue
+FROM sales
+GROUP BY DATE(SaleDate);
+
+--Product Sales Performance--
+CREATE VIEW view_product_sales AS
+SELECT 
+    p.ProductID,
+    p.ProductName,
+    SUM(si.Quantity) AS TotalQuantitySold,
+    SUM(si.Subtotal) AS TotalSalesValue
+FROM products p
+JOIN salesitems si ON p.ProductID = si.ProductID
+GROUP BY p.ProductID;
+
+--Employee Sales Performance--
+CREATE VIEW view_employee_sales AS
+SELECT 
+    e.EmployeeID,
+    CONCAT(e.FirstName, ' ', e.LastName) AS EmployeeName,
+    COUNT(s.SaleID) AS SalesHandled,
+    SUM(s.TotalAmount) AS TotalSalesValue
+FROM employee e
+LEFT JOIN sales s ON e.EmployeeID = s.EmployeeID
+GROUP BY e.EmployeeID;
+
+--Active Promotions--
+CREATE VIEW view_active_promotions AS
+SELECT 
+    PromotionID,
+    PromotionName,
+    DiscountPercentage,
+    StartDate,
+    EndDate,
+    Status
+FROM promotions
+WHERE Status = 'Active';
+
+--Product Price List--
+CREATE VIEW view_product_price_list AS
+SELECT 
+    ProductID,
+    ProductName,
+    SellingPrice,
+    Status
+FROM products
+WHERE Status = 'Active';
+
+--Supplier Product List--
+CREATE VIEW view_supplier_products AS
+SELECT 
+    s.SupplierName,
+    p.ProductName,
+    p.CostPrice,
+    p.SellingPrice
+FROM supplier s
+JOIN products p ON s.SupplierID = p.SupplierID;
+
+--Employee Attendance Summary--
+CREATE VIEW view_employee_attendance AS
+SELECT 
+    e.EmployeeID,
+    CONCAT(e.FirstName, ' ', e.LastName) AS EmployeeName,
+    COUNT(a.AttendanceID) AS DaysRecorded,
+    SUM(a.Status = 'Present') AS DaysPresent,
+    SUM(a.Status = 'Absent') AS DaysAbsent
+FROM employee e
+LEFT JOIN attendancelog a ON e.EmployeeID = a.EmployeeID
+GROUP BY e.EmployeeID;
+
+
+
+>>>>>>> d7f202d7a94398ae05fbb09b52bca22ee9295d9d
