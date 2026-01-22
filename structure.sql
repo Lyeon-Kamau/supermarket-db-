@@ -633,10 +633,7 @@ ALTER TABLE `salesitems`
   ADD CONSTRAINT `salesitems_ibfk_2` FOREIGN KEY (`ProductID`) REFERENCES `products` (`ProductID`);
 COMMIT;
 
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
--VIEWS--
+--VIEWS--
 
 --Customer Purchase Summary--
 CREATE VIEW view_customer_sales_summary AS
@@ -726,6 +723,176 @@ SELECT
 FROM employee e
 LEFT JOIN attendancelog a ON e.EmployeeID = a.EmployeeID
 GROUP BY e.EmployeeID;
+
+--EVENTS--
+SET GLOBAL event_scheduler = ON;
+
+SHOW VARIABLES LIKE 'event_scheduler';
+
+CREATE EVENT end_expired_promotions
+ON SCHEDULE EVERY 1 DAY
+DO
+UPDATE promotions
+SET status = 'Expired'
+WHERE end_date < CURDATE()
+AND status = 'Active';
+
+--Archive old prices into pricehistory'
+
+CREATE EVENT archive_price_changes
+ON SCHEDULE EVERY 1 DAY
+DO
+INSERT INTO pricehistory (ProductID, OldPrice, ChangeDate)
+SELECT ProductID, Price, NOW()
+FROM products
+WHERE Price <> (
+    SELECT NewPrice
+    FROM pricehistory
+    WHERE pricehistory.ProductID = products.ProductID
+    ORDER BY ChangeDate DESC
+    LIMIT 1
+);
+
+--Mark employees absent if they didn’t check in'
+
+CREATE EVENT mark_daily_absence
+ON SCHEDULE EVERY 1 DAY
+STARTS CURRENT_DATE + INTERVAL 23 HOUR + INTERVAL 59 MINUTE
+DO
+INSERT INTO attendancelog (EmployeeID, Date, Status)
+SELECT e.EmployeeID, CURDATE(), 'Absent'
+FROM employee e
+WHERE e.EmployeeID NOT IN (
+    SELECT EmployeeID
+    FROM attendancelog
+    WHERE Date = CURDATE()
+);
+
+--Auto-close completed purchase orders
+CREATE EVENT close_completed_purchase_orders
+ON SCHEDULE EVERY 1 DAY
+DO
+UPDATE purchaseorders
+SET Status = 'Completed'
+WHERE OrderID NOT IN (
+    SELECT OrderID
+    FROM purchaseorderitems
+    WHERE QuantityReceived < QuantityOrdered
+);
+
+--User-defined functions--
+
+--Calculate total value of a sale
+DELIMITER $$
+
+CREATE FUNCTION getSaleTotal(sale_id INT)
+RETURNS DECIMAL(10,2)
+DETERMINISTIC
+BEGIN
+    DECLARE total DECIMAL(10,2);
+
+    SELECT SUM(Quantity * UnitPrice)
+    INTO total
+    FROM salesitems
+    WHERE SaleID = sale_id;
+
+    RETURN IFNULL(total, 0);
+END$$
+
+DELIMITER ;
+--Check product stock status
+DELIMITER $$
+
+CREATE FUNCTION stockStatus(product_id INT)
+RETURNS VARCHAR(20)
+DETERMINISTIC
+BEGIN
+    DECLARE qty INT;
+
+    SELECT QuantityInStock
+    INTO qty
+    FROM products
+    WHERE ProductID = product_id;
+
+    IF qty = 0 THEN
+        RETURN 'Out of Stock';
+    ELSEIF qty < 10 THEN
+        RETURN 'Low Stock';
+    ELSE
+        RETURN 'In Stock';
+    END IF;
+END$$
+
+DELIMITER ;
+--Get current price of a product
+DELIMITER $$
+
+CREATE FUNCTION getProductPrice(product_id INT)
+RETURNS DECIMAL(10,2)
+DETERMINISTIC
+BEGIN
+    DECLARE price DECIMAL(10,2);
+
+    SELECT Price
+    INTO price
+    FROM products
+    WHERE ProductID = product_id;
+
+    RETURN price;
+END$$
+
+DELIMITER ;
+--Calculate employee attendance percentage
+DELIMITER $$
+
+CREATE FUNCTION attendancePercentage(emp_id INT)
+RETURNS DECIMAL(5,2)
+DETERMINISTIC
+BEGIN
+    DECLARE total_days INT;
+    DECLARE present_days INT;
+
+    SELECT COUNT(*) INTO total_days
+    FROM attendancelog
+    WHERE EmployeeID = emp_id;
+
+    SELECT COUNT(*) INTO present_days
+    FROM attendancelog
+    WHERE EmployeeID = emp_id
+    AND Status = 'Present';
+
+    IF total_days = 0 THEN
+        RETURN 0;
+    END IF;
+
+    RETURN (present_days / total_days) * 100;
+END$$
+
+DELIMITER ;
+--Check if a promotion is active
+DELIMITER $$
+
+CREATE FUNCTION isPromotionActive(promo_id INT)
+RETURNS VARCHAR(10)
+DETERMINISTIC
+BEGIN
+    DECLARE enddate DATE;
+
+    SELECT End_Date INTO enddate
+    FROM promotions
+    WHERE PromotionID = promo_id;
+
+    IF enddate >= CURDATE() THEN
+        RETURN 'Active';
+    ELSE
+        RETURN 'Expired';
+    END IF;
+END$$
+
+DELIMITER ;
+
+
+
 
 
 
