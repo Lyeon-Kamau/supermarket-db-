@@ -633,9 +633,9 @@ ALTER TABLE `salesitems`
   ADD CONSTRAINT `salesitems_ibfk_2` FOREIGN KEY (`ProductID`) REFERENCES `products` (`ProductID`);
 COMMIT;
 
---VIEWS--
+-- VIEWS
 
---Customer Purchase Summary--
+-- Customer Purchase Summary
 CREATE VIEW view_customer_sales_summary AS
 SELECT 
     c.CustomerID,
@@ -646,7 +646,7 @@ FROM customer c
 LEFT JOIN sales s ON c.CustomerID = s.CustomerID
 GROUP BY c.CustomerID;
 
---Daily Sales Report--
+-- Daily Sales Report
 CREATE VIEW view_daily_sales AS
 SELECT 
     DATE(SaleDate) AS SaleDay,
@@ -658,7 +658,7 @@ SELECT
 FROM sales
 GROUP BY DATE(SaleDate);
 
---Product Sales Performance--
+-- Product Sales Performance
 CREATE VIEW view_product_sales AS
 SELECT 
     p.ProductID,
@@ -669,7 +669,7 @@ FROM products p
 JOIN salesitems si ON p.ProductID = si.ProductID
 GROUP BY p.ProductID;
 
---Employee Sales Performance--
+-- Employee Sales Performance
 CREATE VIEW view_employee_sales AS
 SELECT 
     e.EmployeeID,
@@ -680,7 +680,7 @@ FROM employee e
 LEFT JOIN sales s ON e.EmployeeID = s.EmployeeID
 GROUP BY e.EmployeeID;
 
---Active Promotions--
+-- Active Promotions
 CREATE VIEW view_active_promotions AS
 SELECT 
     PromotionID,
@@ -692,7 +692,7 @@ SELECT
 FROM promotions
 WHERE Status = 'Active';
 
---Product Price List--
+-- Product Price List
 CREATE VIEW view_product_price_list AS
 SELECT 
     ProductID,
@@ -702,7 +702,7 @@ SELECT
 FROM products
 WHERE Status = 'Active';
 
---Supplier Product List--
+-- Supplier Product List
 CREATE VIEW view_supplier_products AS
 SELECT 
     s.SupplierName,
@@ -712,7 +712,7 @@ SELECT
 FROM supplier s
 JOIN products p ON s.SupplierID = p.SupplierID;
 
---Employee Attendance Summary--
+-- Employee Attendance Summary
 CREATE VIEW view_employee_attendance AS
 SELECT 
     e.EmployeeID,
@@ -724,7 +724,7 @@ FROM employee e
 LEFT JOIN attendancelog a ON e.EmployeeID = a.EmployeeID
 GROUP BY e.EmployeeID;
 
---EVENTS--
+-- EVENTS--
 SET GLOBAL event_scheduler = ON;
 
 SHOW VARIABLES LIKE 'event_scheduler';
@@ -737,7 +737,7 @@ SET status = 'Expired'
 WHERE end_date < CURDATE()
 AND status = 'Active';
 
---Archive old prices into pricehistory'
+-- Archive old prices into pricehistory'
 
 CREATE EVENT archive_price_changes
 ON SCHEDULE EVERY 1 DAY
@@ -753,7 +753,7 @@ WHERE Price <> (
     LIMIT 1
 );
 
---Mark employees absent if they didn’t check in'
+-- Mark employees absent if they didn’t check in'
 
 CREATE EVENT mark_daily_absence
 ON SCHEDULE EVERY 1 DAY
@@ -768,7 +768,7 @@ WHERE e.EmployeeID NOT IN (
     WHERE Date = CURDATE()
 );
 
---Auto-close completed purchase orders
+-- Auto-close completed purchase orders
 CREATE EVENT close_completed_purchase_orders
 ON SCHEDULE EVERY 1 DAY
 DO
@@ -780,9 +780,9 @@ WHERE OrderID NOT IN (
     WHERE QuantityReceived < QuantityOrdered
 );
 
---User-defined functions--
+-- User-defined functions--
 
---Calculate total value of a sale
+-- Calculate total value of a sale
 DELIMITER $$
 
 CREATE FUNCTION getSaleTotal(sale_id INT)
@@ -800,7 +800,7 @@ BEGIN
 END$$
 
 DELIMITER ;
---Check product stock status
+-- Check product stock status
 DELIMITER $$
 
 CREATE FUNCTION stockStatus(product_id INT)
@@ -824,7 +824,7 @@ BEGIN
 END$$
 
 DELIMITER ;
---Get current price of a product
+-- Get current price of a product
 DELIMITER $$
 
 CREATE FUNCTION getProductPrice(product_id INT)
@@ -842,7 +842,7 @@ BEGIN
 END$$
 
 DELIMITER ;
---Calculate employee attendance percentage
+-- Calculate employee attendance percentage
 DELIMITER $$
 
 CREATE FUNCTION attendancePercentage(emp_id INT)
@@ -869,7 +869,7 @@ BEGIN
 END$$
 
 DELIMITER ;
---Check if a promotion is active
+-- Check if a promotion is active
 DELIMITER $$
 
 CREATE FUNCTION isPromotionActive(promo_id INT)
